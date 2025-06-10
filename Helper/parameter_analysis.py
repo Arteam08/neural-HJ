@@ -100,20 +100,14 @@ def analyze_parameter_sensitivity(model_checkpoint, base_params=None, param_rang
         
         with torch.no_grad():
             U = solver.solve(dataset['ic'])
-            diff = U - dataset['phi_all']
             rel_l2 = torch.norm(U - dataset['phi_all']) / torch.norm(dataset['phi_all'])
-            print(f"\nDiagnostics for dx={dx}:")
-            print(f"Norm of prediction: {torch.norm(U):.4e}")
-            print(f"Norm of ground truth: {torch.norm(dataset['phi_all']):.4e}")
-            print(f"Norm of difference: {torch.norm(diff):.4e}")
-            print(f"Relative L2 error: {rel_l2:.4e}")
             dx_errors.append(rel_l2.item())
         
         os.remove(os.path.join(save_folder, f"temp_dx_{dx}.pt"))
     
-    ax1.semilogy(param_ranges['dx'], dx_errors, 'o-')
+    ax1.plot(param_ranges['dx'], dx_errors, 'o-')
     ax1.set_xlabel('dx')
-    ax1.set_ylabel('Relative L2 Error (log scale)')
+    ax1.set_ylabel('Relative L2 Error')
     ax1.set_title('Error vs dx')
     ax1.grid(True)
     
@@ -140,20 +134,14 @@ def analyze_parameter_sensitivity(model_checkpoint, base_params=None, param_rang
         
         with torch.no_grad():
             U = solver.solve(dataset['ic'])
-            diff = U - dataset['phi_all']
             rel_l2 = torch.norm(U - dataset['phi_all']) / torch.norm(dataset['phi_all'])
-            print(f"\nDiagnostics for dt={dt}:")
-            print(f"Norm of prediction: {torch.norm(U):.4e}")
-            print(f"Norm of ground truth: {torch.norm(dataset['phi_all']):.4e}")
-            print(f"Norm of difference: {torch.norm(diff):.4e}")
-            print(f"Relative L2 error: {rel_l2:.4e}")
             dt_errors.append(rel_l2.item())
         
         os.remove(os.path.join(save_folder, f"temp_dt_{dt}.pt"))
     
-    ax2.semilogy(param_ranges['dt'], dt_errors, 'o-')
+    ax2.plot(param_ranges['dt'], dt_errors, 'o-')
     ax2.set_xlabel('dt')
-    ax2.set_ylabel('Relative L2 Error (log scale)')
+    ax2.set_ylabel('Relative L2 Error')
     ax2.set_title('Error vs dt')
     ax2.grid(True)
     
@@ -180,20 +168,14 @@ def analyze_parameter_sensitivity(model_checkpoint, base_params=None, param_rang
         
         with torch.no_grad():
             U = solver.solve(dataset['ic'])
-            diff = U - dataset['phi_all']
             rel_l2 = torch.norm(U - dataset['phi_all']) / torch.norm(dataset['phi_all'])
-            print(f"\nDiagnostics for t_max={t_max}:")
-            print(f"Norm of prediction: {torch.norm(U):.4e}")
-            print(f"Norm of ground truth: {torch.norm(dataset['phi_all']):.4e}")
-            print(f"Norm of difference: {torch.norm(diff):.4e}")
-            print(f"Relative L2 error: {rel_l2:.4e}")
             t_max_errors.append(rel_l2.item())
         
         os.remove(os.path.join(save_folder, f"temp_tmax_{t_max}.pt"))
     
-    ax3.semilogy(param_ranges['t_max'], t_max_errors, 'o-')
+    ax3.plot(param_ranges['t_max'], t_max_errors, 'o-')
     ax3.set_xlabel('t_max')
-    ax3.set_ylabel('Relative L2 Error (log scale)')
+    ax3.set_ylabel('Relative L2 Error')
     ax3.set_title('Error vs t_max')
     ax3.grid(True)
     
