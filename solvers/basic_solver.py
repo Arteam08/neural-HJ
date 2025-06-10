@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 #we define a class that solves the equation give H, H^, dx, dt, t_steps
 torch.autograd.set_detect_anomaly(True)
 
-clipping_value=0.5e3
+clipping_value=0.5*1e3
 
 class BasicSolver:
     def __init__(self,  H_hat, dx, dt, Nt, x_max, device):
@@ -40,13 +40,17 @@ class BasicSolver:
         U_x[:,:,0]=self.get_U_x_t(U[:,:,0])
         for t in range(1, self.Nt):
             H_temp=self.H_hat(U_x, t)
-            H_temp=torch.clamp(H_temp, min=-clipping_value, max=clipping_value)
-            assert torch.all(torch.isfinite(H_temp)), "H_temp is not finite"
+            #print if clipping is happening
+            if (torch.rand(1).item() < 0.001) and (torch.any(H_temp<-clipping_value) or torch.any(H_temp>clipping_value)):
+                print("Clipping is happening")
+            H_temp = clipping_value * torch.tanh(H_temp / clipping_value)
+
+            assert torch.all(torch.isfinite(H_temp)), "H_temp is not finite" 
             U[:,:,t]=U[:,:,t-1] -self.dt*H_temp
-            U=torch.clamp(U, min=-clipping_value, max=clipping_value)
+            U= clipping_value * torch.tanh(U / clipping_value)
             assert torch.all(torch.isfinite(U[:,:,t])), "U is not finite"
             U_x[:,:,t]=self.get_U_x_t(U[:,:,t])
-            U_x=torch.clamp(U_x, min=-clipping_value, max=clipping_value)
+            U_x= clipping_value * torch.tanh(U_x / clipping_value)
             assert torch.all(torch.isfinite(U_x[:,:,t])), "U_x is not finite"
         return U
 

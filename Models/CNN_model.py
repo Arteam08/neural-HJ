@@ -139,7 +139,8 @@ class CNN_model(nn.Module):
         dataset = BurgersDataset(dataset_dict, self.device)
         data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
-        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=lr, weight_decay=1e-2)
+
         scheduler = scheduler_class(optimizer, mode='min', patience=10, factor=0.5)
 
         if writer is None:

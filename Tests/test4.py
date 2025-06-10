@@ -2,11 +2,23 @@ import matplotlib.pyplot as plt
 from solvers.basic_solver import *
 from Helper.fluxes import *
 from Models.CNN_model import *
+from torch.utils.tensorboard import SummaryWriter
+import os
 torch.autograd.set_detect_anomaly(True)
 # train_dataset_path="Data_generation/data/burgers_train_3s.pt"
-train_dataset_path="Data_generation/data/burgers_train_1s.pt"
+# train_dataset_path="Data_generation/data/burgers_train_0p5s.pt"
+# train_dataset_path="Data_generation/data/burgers_train_0p8s.pt"
+# train_dataset_path="Data_generation/data/burgers_train_1s.pt"
+# train_dataset_path="Data_generation/data/burgers_train_1p5s.pt"
+train_dataset_path="Data_generation/data/burgers_train_2p2s.pt"
 test_dataset_path="Data_generation/data/burgers_test_5s.pt"
 dataset=torch.load(test_dataset_path)
+
+#########################
+save_name_prefix="test4_prog4"
+load_model_path="Checkpoints/test4_prog4_best.pt"
+
+
 
 # Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -20,15 +32,18 @@ Nt=dataset["Nt"]
 t_max=dataset["t_max"]
 x_min=dataset["x_min"]
 x_max=dataset["x_max"]
-model=CNN_model(device, 5, 5, [64, 64], activation=F.relu)
-# model=CNN_model.load("Checkpoints/test4.pt")
+# model=CNN_model(device, 5, 5, [64, 64], activation=F.relu)
+model=CNN_model.load(load_model_path)
 # H_hat=H_hat_wrapperLF(H_Burgers)   
 H_hat=model.forward 
-total_epochs=100
+total_epochs=300
 epoch_group=20
 best_loss=1e10
+
+writer = SummaryWriter(log_dir=os.path.join("runs", save_name_prefix))
+
 for i in range(total_epochs//epoch_group):
-    best_loss=model.train_on_data(n_epochs=epoch_group, batch_size=32, lr=1e-4, dataset_path=train_dataset_path, save_folder="Checkpoints", save_name_prefix="test4", writer=None, best_loss=best_loss)
+    best_loss=model.train_on_data(n_epochs=epoch_group, batch_size=100, lr=1e-5, dataset_path=train_dataset_path, save_folder="Checkpoints", save_name_prefix=save_name_prefix, writer=writer, best_loss=best_loss)
     solver=BasicSolver (H_hat, dx, dt, Nt, x_max, device)
     torch.cuda.empty_cache()
     U=solver.solve(phi0)
@@ -61,7 +76,7 @@ plt.xlabel('Time')
 plt.ylabel('Space')
 
 plt.tight_layout()
-plt.savefig("Tests/test4.png")
+plt.savefig("Tests/test4_prog.png")
 plt.show()
 
 
