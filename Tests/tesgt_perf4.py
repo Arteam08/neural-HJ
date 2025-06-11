@@ -32,7 +32,7 @@ num_batches = 0
 with torch.no_grad():
     for ic, U_GT in data_loader:
         U = solver.solve(ic)
-        rel_l2 = torch.norm(U - U_GT) / torch.norm(U_GT)
+        rel_l2 = torch.sqrt(torch.mean((U - U_GT)**2)) / torch.sqrt(torch.mean(U_GT**2))
         total_rel_l2 += rel_l2
         num_batches += 1
 

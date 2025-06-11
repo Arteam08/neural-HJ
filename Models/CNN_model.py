@@ -133,6 +133,8 @@ class CNN_model(nn.Module):
                       best_loss=float("inf"),
                       writer=None,
                       loss_fn=nn.MSELoss(),
+                      use_rollback=True,
+                      rollback_threshold=1.1,  # Allow 10% increase before rollback
                       ):
         self.train()
         dataset_dict = torch.load(dataset_path)
@@ -140,7 +142,6 @@ class CNN_model(nn.Module):
         data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
         optimizer = torch.optim.AdamW(self.parameters(), lr=lr, weight_decay=1e-2)
-
         scheduler = scheduler_class(optimizer, mode='min', patience=10, factor=0.5)
 
         if writer is None:
@@ -150,6 +151,10 @@ class CNN_model(nn.Module):
         solver = BasicSolver(self.forward, dataset_dict["dx"], dataset_dict["dt"], 
                            dataset_dict["Nt"], dataset_dict["x_max"], self.device)
 
+        # For rollback: keep track of best state
+        best_state = None
+        prev_loss = float("inf")
+        
         for e in range(n_epochs):
             self.epoch_count += 1
             epoch_loss = 0
@@ -162,7 +167,8 @@ class CNN_model(nn.Module):
                 ic = ic.requires_grad_(True)
                 U = solver.solve(ic)
                 loss = loss_fn(U, U_GT)
-                rel_l2 = loss.item() / torch.norm(U_GT)
+                # Compute relative L2 error properly normalized by all dimensions
+                rel_l2 = torch.sqrt(torch.mean((U - U_GT)**2)) / torch.sqrt(torch.mean(U_GT**2))
 
                 loss.backward()
                 
@@ -177,7 +183,26 @@ class CNN_model(nn.Module):
             epoch_loss /= len(data_loader)
             epoch_rel_l2 /= len(data_loader)
 
-            scheduler.step(epoch_loss)
+            # Check if we need to rollback
+            if use_rollback and epoch_loss > rollback_threshold * prev_loss and best_state is not None:
+                print(f"Loss increased significantly (from {best_loss:.4e} to {epoch_loss:.4e}). Rolling back to best model...")
+                # Restore best state
+                self.load_state_dict(best_state['model'])
+                optimizer.load_state_dict(best_state['optimizer'])
+                if best_state['scheduler'] is not None:
+                    scheduler.load_state_dict(best_state['scheduler'])
+                self.epoch_count = best_state['epoch']
+                
+                # Reset loss to best loss
+                epoch_loss = best_loss
+                epoch_rel_l2 = best_state['rel_l2']
+                
+                # Reduce learning rate after rollback to explore more carefully
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] *= 0.5
+            else:
+                prev_loss = epoch_loss
+                scheduler.step(epoch_loss)
 
             if e % 5 == 0:
                 print(f"Epoch {self.epoch_count}/{n_epochs} | Loss: {epoch_loss:.4e} | RelL2: {epoch_rel_l2:.4e}")
@@ -188,6 +213,14 @@ class CNN_model(nn.Module):
 
             if epoch_loss < best_loss:
                 best_loss = epoch_loss
+                # Save best state for rollback
+                best_state = {
+                    'model': self.state_dict().copy(),
+                    'optimizer': optimizer.state_dict().copy(),
+                    'scheduler': scheduler.state_dict().copy() if hasattr(scheduler, 'state_dict') else None,
+                    'epoch': self.epoch_count,
+                    'rel_l2': epoch_rel_l2
+                }
                 self.save(save_folder, save_name_prefix + "_best")
                 print(f"Best model saved at epoch {self.epoch_count} with loss {epoch_loss:.4e}")
 

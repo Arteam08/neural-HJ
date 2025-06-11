@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 from solvers.basic_solver import *
 from Helper.fluxes import *
@@ -52,7 +51,8 @@ plt.show()
 phi_tensor_bis = phi_tensor_bis.to(device)
 phi_all = phi_all.to(device)
 diff = phi_tensor_bis - phi_all
-print("relative mse1", torch.mean(diff**2/(phi_all**2+1e-8)).item())
+rel_l2 = torch.sqrt(torch.mean((phi_tensor_bis - phi_all)**2)) / torch.sqrt(torch.mean(phi_all**2))
+print(f"Relative L2 error: {rel_l2:.4e}")
 
 
 

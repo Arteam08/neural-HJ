@@ -5,18 +5,19 @@ from Models.CNN_model import *
 from torch.utils.tensorboard import SummaryWriter
 import os
 torch.autograd.set_detect_anomaly(True)
+# train_dataset_path="Data_generation/data/burgers_train_0p1s.pt"
 # train_dataset_path="Data_generation/data/burgers_train_3s.pt"
 # train_dataset_path="Data_generation/data/burgers_train_0p5s.pt"
 # train_dataset_path="Data_generation/data/burgers_train_0p8s.pt"
-# train_dataset_path="Data_generation/data/burgers_train_1s.pt"
+train_dataset_path="Data_generation/data/burgers_train_1s.pt"
 # train_dataset_path="Data_generation/data/burgers_train_1p5s.pt"
-train_dataset_path="Data_generation/data/burgers_train_2p2s.pt"
+# train_dataset_path="Data_generation/data/burgers_train_2p2s.pt"
 test_dataset_path="Data_generation/data/burgers_test_5s.pt"
 dataset=torch.load(test_dataset_path)
 
 #########################
-save_name_prefix="test4_prog4"
-load_model_path="Checkpoints/test4_prog4_best.pt"
+save_name_prefix="test4_128_2"
+load_model_path="Checkpoints/test4_128_0_best.pt"
 
 
 
@@ -32,11 +33,11 @@ Nt=dataset["Nt"]
 t_max=dataset["t_max"]
 x_min=dataset["x_min"]
 x_max=dataset["x_max"]
-# model=CNN_model(device, 5, 5, [64, 64], activation=F.relu)
+# model=CNN_model(device, 5, 5, [128, 128,128], activation=F.relu)
 model=CNN_model.load(load_model_path)
 # H_hat=H_hat_wrapperLF(H_Burgers)   
 H_hat=model.forward 
-total_epochs=300
+total_epochs=2*10**3
 epoch_group=20
 best_loss=1e10
 
@@ -47,14 +48,14 @@ for i in range(total_epochs//epoch_group):
     solver=BasicSolver (H_hat, dx, dt, Nt, x_max, device)
     torch.cuda.empty_cache()
     U=solver.solve(phi0)
-    rel_l2=torch.norm(U-phi_all)/torch.norm(phi_all)
+    rel_l2=torch.sqrt(torch.mean((U - phi_all)**2)) / torch.sqrt(torch.mean(phi_all**2))
     print(f"test Relative L2 error: {rel_l2:.4e}")
 
 
 
 solver=BasicSolver( H_hat, dx, dt, Nt, x_max, device)
 U=solver.solve(phi0)
-rel_l2=torch.norm(U-phi_all)/torch.norm(phi_all)
+rel_l2=torch.sqrt(torch.mean((U - phi_all)**2)) / torch.sqrt(torch.mean(phi_all**2))
 print(f"Final Relative L2 error: {rel_l2:.4e}")
 # Plot results
 plt.figure(figsize=(12,5)) 
@@ -78,6 +79,7 @@ plt.ylabel('Space')
 plt.tight_layout()
 plt.savefig("Tests/test4_prog.png")
 plt.show()
+
 
 
 
